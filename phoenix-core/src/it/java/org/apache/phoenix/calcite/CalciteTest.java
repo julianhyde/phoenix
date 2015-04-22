@@ -1,8 +1,30 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.phoenix.calcite;
 
 import com.google.common.collect.Lists;
 
 import org.apache.calcite.jdbc.CalciteConnection;
+import org.apache.calcite.jdbc.CalcitePrepare;
+import org.apache.calcite.linq4j.function.Function0;
+import org.apache.calcite.prepare.CalcitePrepareImpl;
+import org.apache.calcite.sql.parser.SqlParser;
+import org.apache.phoenix.calcite.parser.PhoenixParserImpl;
 import org.apache.phoenix.end2end.BaseClientManagedTimeIT;
 import org.apache.phoenix.jdbc.PhoenixConnection;
 import org.junit.Before;
@@ -13,6 +35,7 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.sql.*;
 import java.util.List;
+import java.util.Properties;
 
 import static org.apache.phoenix.util.TestUtil.JOIN_ITEM_TABLE_FULL_NAME;
 import static org.apache.phoenix.util.TestUtil.JOIN_ORDER_TABLE_FULL_NAME;
@@ -99,6 +122,18 @@ public class CalciteTest extends BaseClientManagedTimeIT {
             return this;
         }
 
+
+        public boolean execute() {
+            try {
+                final Statement statement = start.getConnection().createStatement();
+                final boolean execute = statement.execute(sql);
+                statement.close();
+                return execute;
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         public List<Object[]> getResult(String sql) {
             try {
                 final Statement statement = start.getConnection().createStatement();
@@ -138,8 +173,8 @@ public class CalciteTest extends BaseClientManagedTimeIT {
     }
 
     private static Connection createConnection() throws SQLException {
-        final Connection connection = DriverManager.getConnection(
-            "jdbc:calcite:");
+        final PhoenixCalciteDriver driver = new PhoenixCalciteDriver();
+        final Connection connection = driver.connect("jdbc:calcite:", new Properties());
         final CalciteConnection calciteConnection =
             connection.unwrap(CalciteConnection.class);
         final String url = getUrl();
@@ -287,23 +322,23 @@ public class CalciteTest extends BaseClientManagedTimeIT {
                           {"00A423122312312", "a", "00D300000000XHP"}})
                 .close();
         
-        start().sql("select t1.entity_id, t2.a_string, t3.organization_id from aTable t1 join aTable t2 on t1.entity_id = t2.entity_id and t1.organization_id = t2.organization_id join atable t3 on t1.entity_id = t3.entity_id and t1.organization_id = t3.organization_id") 
+        start().sql("select t1.entity_id, t2.a_string, t3.organization_id from aTable t1 join aTable t2 on t1.entity_id = t2.entity_id and t1.organization_id = t2.organization_id join atable t3 on t1.entity_id = t3.entity_id and t1.organization_id = t3.organization_id")
                 .explainIs("PhoenixToEnumerableConverter\n" +
-                           "  PhoenixServerProject(ENTITY_ID=[$19], A_STRING=[$38], ORGANIZATION_ID=[$0])\n" +
-                           "    PhoenixServerJoin(condition=[AND(=($19, $1), =($18, $0))], joinType=[inner])\n" +
-                           "      PhoenixTableScan(table=[[phoenix, ATABLE]])\n" +
-                           "      PhoenixServerJoin(condition=[AND(=($1, $19), =($0, $18))], joinType=[inner])\n" +
-                           "        PhoenixTableScan(table=[[phoenix, ATABLE]])\n" +
-                           "        PhoenixTableScan(table=[[phoenix, ATABLE]])\n")
+                        "  PhoenixServerProject(ENTITY_ID=[$19], A_STRING=[$38], ORGANIZATION_ID=[$0])\n" +
+                        "    PhoenixServerJoin(condition=[AND(=($19, $1), =($18, $0))], joinType=[inner])\n" +
+                        "      PhoenixTableScan(table=[[phoenix, ATABLE]])\n" +
+                        "      PhoenixServerJoin(condition=[AND(=($1, $19), =($0, $18))], joinType=[inner])\n" +
+                        "        PhoenixTableScan(table=[[phoenix, ATABLE]])\n" +
+                        "        PhoenixTableScan(table=[[phoenix, ATABLE]])\n")
                 .resultIs(new Object[][] {
-                          {"00A123122312312", "a", "00D300000000XHP"}, 
-                          {"00A223122312312", "a", "00D300000000XHP"}, 
-                          {"00A323122312312", "a", "00D300000000XHP"}, 
-                          {"00A423122312312", "a", "00D300000000XHP"}, 
-                          {"00B523122312312", "b", "00D300000000XHP"}, 
-                          {"00B623122312312", "b", "00D300000000XHP"}, 
-                          {"00B723122312312", "b", "00D300000000XHP"}, 
-                          {"00B823122312312", "b", "00D300000000XHP"}, 
+                          {"00A123122312312", "a", "00D300000000XHP"},
+                          {"00A223122312312", "a", "00D300000000XHP"},
+                          {"00A323122312312", "a", "00D300000000XHP"},
+                          {"00A423122312312", "a", "00D300000000XHP"},
+                          {"00B523122312312", "b", "00D300000000XHP"},
+                          {"00B623122312312", "b", "00D300000000XHP"},
+                          {"00B723122312312", "b", "00D300000000XHP"},
+                          {"00B823122312312", "b", "00D300000000XHP"},
                           {"00C923122312312", "c", "00D300000000XHP"}})
                 .close();
     }
@@ -596,6 +631,11 @@ public class CalciteTest extends BaseClientManagedTimeIT {
                .close();
     }
 
+    /** Tests a simple command that is defined in Phoenix's extended SQL parser. */
+    @Test public void testCommit() {
+        start().sql("commit").execute();
+    }
+
     @Test public void testConnectUsingModel() throws Exception {
         final Start start = new Start() {
             @Override
@@ -608,5 +648,25 @@ public class CalciteTest extends BaseClientManagedTimeIT {
                 + "  PhoenixTableScan(table=[[HR, ATABLE]])\n")
             // .resultIs("Xx")
             .close();
+    }
+
+    static class PhoenixPrepare extends CalcitePrepareImpl {
+        @Override
+        protected SqlParser.ConfigBuilder createParserConfig() {
+            return super.createParserConfig()
+                    .setParserFactory(PhoenixParserImpl.FACTORY);
+        }
+    }
+
+    static class PhoenixCalciteDriver extends org.apache.calcite.jdbc.Driver {
+        @Override
+        protected Function0<CalcitePrepare> createPrepareFactory() {
+            return new Function0<CalcitePrepare>() {
+                @Override
+                public CalcitePrepare apply() {
+                    return new PhoenixPrepare();
+                }
+            };
+        }
     }
 }
