@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.jdbc.CalciteSchemaImpl;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.materialize.MaterializationService;
 import org.apache.calcite.schema.*;
@@ -60,7 +61,7 @@ public class PhoenixSchema implements Schema {
         this.parentSchema = parentSchema;
         this.pc = pc;
         this.client = new MetaDataClient(pc);
-        this.calciteSchema = new CalciteSchema(CalciteSchema.from(parentSchema), this, name);
+        this.calciteSchema = new CalciteSchemaImpl(CalciteSchemaImpl.from(parentSchema), this, name);
         this.tableMap = Maps.<String, PTable> newHashMap();
         this.functionMap = Maps.<String, Function> newHashMap();
         loadTables();

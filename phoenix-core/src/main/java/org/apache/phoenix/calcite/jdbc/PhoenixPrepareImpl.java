@@ -65,10 +65,10 @@ public class PhoenixPrepareImpl extends CalcitePrepareImpl {
         
         if (prepareContext.config().materializationsEnabled()) {
             for (CalciteSchema subSchema : prepareContext.getRootSchema().getSubSchemaMap().values()) {
-                if (subSchema.schema instanceof PhoenixSchema) {
-                    ((PhoenixSchema) subSchema.schema).defineIndexesAsMaterializations();
+                if (subSchema.getSchema() instanceof PhoenixSchema) {
+                    ((PhoenixSchema) subSchema.getSchema()).defineIndexesAsMaterializations();
                     for (CalciteSchema phoenixSubSchema : subSchema.getSubSchemaMap().values()) {
-                        ((PhoenixSchema) phoenixSubSchema.schema).defineIndexesAsMaterializations();
+                        ((PhoenixSchema) phoenixSubSchema.getSchema()).defineIndexesAsMaterializations();
                     }
                 }
             }
