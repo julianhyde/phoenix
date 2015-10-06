@@ -142,6 +142,12 @@ abstract public class SingleAggregateFunction extends AggregateFunction {
         agg.aggregate(null, ptr);
         return agg;
     }
+
+    @Override
+    public void readFields(DataInput input) throws IOException {
+        super.readFields(input);
+        this.isConstant = getChildren().get(0) instanceof LiteralExpression;
+    }
     
     public void readFields(DataInput input, Configuration conf) throws IOException {
         super.readFields(input);

@@ -359,9 +359,9 @@ public class PhoenixConverterRules {
             }            
         };
         
-        private static final PhoenixServerProjectRule INSTANCE = new PhoenixServerProjectRule(Predicates.<LogicalProject>alwaysTrue());
+        public static final PhoenixServerProjectRule INSTANCE = new PhoenixServerProjectRule(Predicates.<LogicalProject>alwaysTrue());
 
-        private static final PhoenixServerProjectRule CONVERTIBLE = new PhoenixServerProjectRule(IS_CONVERTIBLE);
+        public static final PhoenixServerProjectRule CONVERTIBLE = new PhoenixServerProjectRule(IS_CONVERTIBLE);
 
         private PhoenixServerProjectRule(Predicate<LogicalProject> predicate) {
             super(LogicalProject.class, predicate, Convention.NONE, 
